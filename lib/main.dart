@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'core/app_constants.dart';
+import 'screens/home_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,23 +13,16 @@ class AeroLogApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AeroLog - RC Flight & Weather',
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00B4D8),
+          seedColor: AppConstants.primaryMint,
           brightness: Brightness.light,
         ),
         useMaterial3: true,
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text(
-            'AeroLog Initialized',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
+      home: const HomeScreen(),
     );
   }
 }
