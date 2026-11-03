@@ -1,34 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/app_constants.dart';
+import '../providers/weather_provider.dart';
 import '../widgets/spot_card.dart';
 import 'spot_detail_screen.dart';
 
-class SpotListScreen extends StatefulWidget {
+class SpotListScreen extends StatelessWidget {
   const SpotListScreen({super.key});
 
   @override
-  State<SpotListScreen> createState() => _SpotListScreenState();
-}
-
-class _SpotListScreenState extends State<SpotListScreen> {
-  String _searchQuery = '';
-  String _selectedFilter = 'Semua';
-
-  @override
   Widget build(BuildContext context) {
-    final filteredSpots = AppConstants.flyingSpots.where((spot) {
-      final matchesSearch = spot['name']
-              .toString()
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase()) ||
-          spot['region']
-              .toString()
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase());
-      final matchesFilter =
-          _selectedFilter == 'Semua' || spot['status'] == _selectedFilter;
-      return matchesSearch && matchesFilter;
-    }).toList();
+    final weatherProv = context.watch<WeatherProvider>();
+    final filteredSpots = weatherProv.filteredSpots;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -53,7 +36,7 @@ class _SpotListScreenState extends State<SpotListScreen> {
             child: Column(
               children: [
                 TextField(
-                  onChanged: (val) => setState(() => _searchQuery = val),
+                  onChanged: weatherProv.setSearchQuery,
                   decoration: InputDecoration(
                     hintText: 'Cari nama lapangan atau wilayah...',
                     prefixIcon: const Icon(Icons.search),
@@ -71,19 +54,28 @@ class _SpotListScreenState extends State<SpotListScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: ['Semua', 'Optimal', 'Waspada Angin'].map((filter) {
-                    final isSelected = _selectedFilter == filter;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: ChoiceChip(
-                        label: Text(filter),
-                        selected: isSelected,
-                        selectedColor: AppConstants.primaryMint.withValues(alpha: 0.2),
-                        onSelected: (_) => setState(() => _selectedFilter = filter),
-                      ),
-                    );
-                  }).toList(),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      'Semua',
+                      'Optimal',
+                      'Waspada Angin',
+                      'Favorit'
+                    ].map((filter) {
+                      final isSelected = weatherProv.selectedFilter == filter;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ChoiceChip(
+                          label: Text(filter),
+                          selected: isSelected,
+                          selectedColor:
+                              AppConstants.primaryMint.withValues(alpha: 0.2),
+                          onSelected: (_) => weatherProv.setFilter(filter),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Expanded(
@@ -102,16 +94,16 @@ class _SpotListScreenState extends State<SpotListScreen> {
                                 mainAxisExtent: 156,
                               ),
                               itemBuilder: (context, index) {
-                                final spot = filteredSpots[index];
+                                final spotMap = filteredSpots[index].toMap();
                                 return SpotCard(
-                                  spot: spot,
+                                  spot: spotMap,
                                   margin: EdgeInsets.zero,
                                   onTap: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) =>
-                                            SpotDetailScreen(spot: spot),
+                                            SpotDetailScreen(spot: spotMap),
                                       ),
                                     );
                                   },
@@ -121,15 +113,15 @@ class _SpotListScreenState extends State<SpotListScreen> {
                           : ListView.builder(
                               itemCount: filteredSpots.length,
                               itemBuilder: (context, index) {
-                                final spot = filteredSpots[index];
+                                final spotMap = filteredSpots[index].toMap();
                                 return SpotCard(
-                                  spot: spot,
+                                  spot: spotMap,
                                   onTap: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) =>
-                                            SpotDetailScreen(spot: spot),
+                                            SpotDetailScreen(spot: spotMap),
                                       ),
                                     );
                                   },

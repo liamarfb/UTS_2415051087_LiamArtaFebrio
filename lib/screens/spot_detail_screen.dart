@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/app_constants.dart';
+import '../providers/weather_provider.dart';
 import 'add_log_screen.dart';
 
 class SpotDetailScreen extends StatelessWidget {
@@ -10,6 +12,7 @@ class SpotDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isOptimal = spot['status'] == 'Optimal';
+    final String spotId = spot['id']?.toString() ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -20,6 +23,34 @@ class SpotDetailScreen extends StatelessWidget {
           'Detail Lokasi Terbang',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
+        actions: [
+          Consumer<WeatherProvider>(
+            builder: (context, weatherProv, _) {
+              final isFav = weatherProv.isFavorite(spotId);
+              return IconButton(
+                tooltip: 'Simpan ke Favorit',
+                onPressed: () {
+                  weatherProv.toggleFavorite(spotId);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isFav
+                            ? 'Dihapus dari lokasi favorit'
+                            : 'Ditambahkan ke lokasi favorit!',
+                      ),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  isFav ? Icons.bookmark : Icons.bookmark_border,
+                  color: isFav ? AppConstants.accentPeach : Colors.grey,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -44,7 +75,8 @@ class SpotDetailScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -70,11 +102,13 @@ class SpotDetailScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.location_on, color: Colors.white70, size: 16),
+                          const Icon(Icons.location_on,
+                              color: Colors.white70, size: 16),
                           const SizedBox(width: 4),
                           Text(
                             spot['region'].toString(),
-                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 14),
                           ),
                         ],
                       ),
@@ -118,12 +152,15 @@ class SpotDetailScreen extends StatelessWidget {
                       children: [
                         const Text(
                           'Spesifikasi Area & Rekomendasi Wahana',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         const Divider(height: 24),
-                        _buildSpecRow('Karakteristik Medan', spot['terrain'].toString()),
+                        _buildSpecRow(
+                            'Karakteristik Medan', spot['terrain'].toString()),
                         const SizedBox(height: 12),
-                        _buildSpecRow('Rekomendasi Pesawat', spot['recommendedWing'].toString()),
+                        _buildSpecRow('Rekomendasi Pesawat',
+                            spot['recommendedWing'].toString()),
                         const SizedBox(height: 12),
                         _buildSpecRow(
                           'Koordinat GPS',
@@ -155,14 +192,16 @@ class SpotDetailScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => AddLogScreen(initialSpotName: spot['name'].toString()),
+                          builder: (_) => AddLogScreen(
+                              initialSpotName: spot['name'].toString()),
                         ),
                       );
                     },
                     icon: const Icon(Icons.note_add_outlined),
                     label: const Text(
                       'Catat Flight Log di Lokasi Ini',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                   ),
                 ),
@@ -174,7 +213,8 @@ class SpotDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoTile(IconData icon, String label, String value, Color color) {
+  Widget _buildInfoTile(
+      IconData icon, String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -187,7 +227,8 @@ class SpotDetailScreen extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 26),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          Text(label,
+              style: const TextStyle(fontSize: 12, color: Colors.black54)),
           const SizedBox(height: 4),
           Text(
             value,
@@ -203,7 +244,8 @@ class SpotDetailScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.black54, fontSize: 13)),
+        Text(label,
+            style: const TextStyle(color: Colors.black54, fontSize: 13)),
         const SizedBox(width: 16),
         Flexible(
           child: Text(
