@@ -3,9 +3,17 @@ import '../core/app_constants.dart';
 import '../widgets/section_header.dart';
 import '../widgets/spot_card.dart';
 import '../widgets/weather_stat_badge.dart';
+import 'spot_detail_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  void _openDetail(BuildContext context, Map<String, dynamic> spot) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => SpotDetailScreen(spot: spot)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,12 +41,13 @@ class HomeScreen extends StatelessWidget {
         ),
         actions: [
           Container(
-            margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: AppConstants.softMintBg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppConstants.primaryMint.withValues(alpha: 0.4)),
+              border: Border.all(
+                  color: AppConstants.primaryMint.withValues(alpha: 0.4)),
             ),
             child: Row(
               children: [
@@ -100,10 +109,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 20),
-                const SectionHeader(
-                  title: 'Rekomendasi Lokasi Terbang',
-                  actionText: 'Lihat Semua',
-                ),
+                const SectionHeader(title: 'Rekomendasi Lokasi Terbang'),
                 const SizedBox(height: 4),
                 if (isWide)
                   GridView.builder(
@@ -120,6 +126,7 @@ class HomeScreen extends StatelessWidget {
                       return SpotCard(
                         spot: spots[index],
                         margin: EdgeInsets.zero,
+                        onTap: () => _openDetail(context, spots[index]),
                       );
                     },
                   )
@@ -129,7 +136,10 @@ class HomeScreen extends StatelessWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: spots.length,
                     itemBuilder: (context, index) {
-                      return SpotCard(spot: spots[index]);
+                      return SpotCard(
+                        spot: spots[index],
+                        onTap: () => _openDetail(context, spots[index]),
+                      );
                     },
                   ),
               ],
