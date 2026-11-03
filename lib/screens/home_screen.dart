@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/app_constants.dart';
+import '../providers/weather_provider.dart';
 import '../widgets/section_header.dart';
 import '../widgets/spot_card.dart';
 import '../widgets/weather_stat_badge.dart';
@@ -17,7 +19,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const spots = AppConstants.flyingSpots;
+    final weatherProv = context.watch<WeatherProvider>();
+    final spots = weatherProv.spots;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isWideScreen = screenWidth >= 600;
 
@@ -34,12 +37,19 @@ class HomeScreen extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
             Text(
-              AppConstants.appSubtitle,
+              'Live Open-Meteo REST API',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Refresh Data REST API',
+            onPressed: weatherProv.isLoading
+                ? null
+                : () => weatherProv.fetchLiveWeatherSpots(),
+            icon: const Icon(Icons.refresh, color: AppConstants.primaryMint),
+          ),
           Container(
             margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -92,7 +102,7 @@ class HomeScreen extends StatelessWidget {
                       Expanded(
                         flex: 2,
                         child: Column(
-                          children: _buildStatBadges(),
+                          children: _buildStatBadges(weatherProv),
                         ),
                       ),
                     ],
@@ -102,16 +112,65 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(child: _buildStatBadges()[0]),
+                      Expanded(child: _buildStatBadges(weatherProv)[0]),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildStatBadges()[2]),
+                      Expanded(child: _buildStatBadges(weatherProv)[2]),
                     ],
                   ),
                 ],
                 const SizedBox(height: 20),
-                const SectionHeader(title: 'Rekomendasi Lokasi Terbang'),
+                if (weatherProv.errorMessage != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            weatherProv.errorMessage!,
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.red),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: weatherProv.fetchLiveWeatherSpots,
+                          child: const Text('Coba Lagi'),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SectionHeader(
+                  title: 'Cuaca Lokasi Terbang (Live API)',
+                ),
                 const SizedBox(height: 4),
-                if (isWide)
+                if (weatherProv.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 48.0),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 12),
+                          Text('Mengambil cuaca real-time dari Open-Meteo API...'),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (spots.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40.0),
+                    child: Center(
+                      child: Text('Belum ada titik lokasi terbang tersedia.'),
+                    ),
+                  )
+                else if (isWide)
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -123,10 +182,11 @@ class HomeScreen extends StatelessWidget {
                       mainAxisExtent: 156,
                     ),
                     itemBuilder: (context, index) {
+                      final spotMap = spots[index].toMap();
                       return SpotCard(
-                        spot: spots[index],
+                        spot: spotMap,
                         margin: EdgeInsets.zero,
-                        onTap: () => _openDetail(context, spots[index]),
+                        onTap: () => _openDetail(context, spotMap),
                       );
                     },
                   )
@@ -136,9 +196,10 @@ class HomeScreen extends StatelessWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: spots.length,
                     itemBuilder: (context, index) {
+                      final spotMap = spots[index].toMap();
                       return SpotCard(
-                        spot: spots[index],
-                        onTap: () => _openDetail(context, spots[index]),
+                        spot: spotMap,
+                        onTap: () => _openDetail(context, spotMap),
                       );
                     },
                   ),
@@ -165,12 +226,12 @@ class HomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Kondisi Udara Hari Ini',
+            'Kondisi Udara Real-Time (Open-Meteo API)',
             style: TextStyle(color: Colors.white70, fontSize: 13),
           ),
           SizedBox(height: 6),
           Text(
-            'Singaraja & Bali Area: Aman untuk Uji Terbang Fixed-Wing',
+            'Pantauan Angin & Suhu Lapangan Aeromodelling Bali',
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -179,7 +240,7 @@ class HomeScreen extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            'Kecepatan angin rata-rata di bawah 15 km/h pada pagi hingga sore hari.',
+            'Data diperbarui langsung melalui operasi HTTP GET dari satelit cuaca Open-Meteo.',
             style: TextStyle(color: Colors.white, fontSize: 13),
           ),
         ],
@@ -187,19 +248,19 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildStatBadges() {
-    return const [
+  List<Widget> _buildStatBadges(WeatherProvider weatherProv) {
+    return [
       WeatherStatBadge(
         icon: Icons.air,
         label: 'Rata-rata Angin',
-        value: '13.2 km/h',
+        value: '${weatherProv.averageWindSpeed} km/h',
         color: AppConstants.primaryMint,
       ),
-      SizedBox(height: 12),
+      const SizedBox(height: 12),
       WeatherStatBadge(
         icon: Icons.explore_outlined,
         label: 'Spot Terpantau',
-        value: '4 Lokasi',
+        value: '${weatherProv.spots.length} Lokasi',
         color: AppConstants.accentPeach,
       ),
     ];

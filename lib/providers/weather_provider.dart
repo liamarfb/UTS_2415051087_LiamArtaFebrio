@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../core/app_constants.dart';
 import '../models/flying_spot.dart';
+import '../repositories/weather_repository.dart';
 
 class WeatherProvider extends ChangeNotifier {
+  final WeatherRepository _repository;
+
   List<FlyingSpot> _spots = [];
   final Set<String> _favoriteSpotIds = {'spot_1'};
   bool _isLoading = false;
@@ -10,8 +13,9 @@ class WeatherProvider extends ChangeNotifier {
   String _searchQuery = '';
   String _selectedFilter = 'Semua';
 
-  WeatherProvider() {
-    loadInitialSpots();
+  WeatherProvider({WeatherRepository? repository})
+      : _repository = repository ?? WeatherRepository() {
+    fetchLiveWeatherSpots();
   }
 
   List<FlyingSpot> get spots => _spots;
@@ -21,7 +25,6 @@ class WeatherProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
   String get selectedFilter => _selectedFilter;
 
-  // Mengambil daftar lokasi yang sudah difilter berdasarkan pencarian & chip status
   List<FlyingSpot> get filteredSpots {
     return _spots.where((spot) {
       final matchesSearch = spot.name
@@ -38,32 +41,35 @@ class WeatherProvider extends ChangeNotifier {
     }).toList();
   }
 
-  // Menghitung rata-rata kecepatan angin secara dinamis untuk ditampilkan di Dashboard
   double get averageWindSpeed {
     if (_spots.isEmpty) return 0.0;
     final total = _spots.fold<double>(0.0, (sum, item) => sum + item.windSpeed);
     return double.parse((total / _spots.length).toStringAsFixed(1));
   }
 
-  // Memuat data awal sebelum dihubungkan ke live REST API pada Tahap 8
-  void loadInitialSpots() {
+  // Mengambil data cuaca real-time dari Open-Meteo REST API via Repository
+  Future<void> fetchLiveWeatherSpots() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _spots = AppConstants.flyingSpots
-          .map((item) => FlyingSpot.fromMap(Map<String, dynamic>.from(item)))
-          .toList();
+      final liveSpots = await _repository.getLiveFlyingSpots();
+      _spots = liveSpots;
     } catch (e) {
-      _errorMessage = 'Gagal memuat data lokasi: $e';
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      // Jika sedang belum ada data sama sekali, sediakan fallback awal agar tetap aman
+      if (_spots.isEmpty) {
+        _spots = AppConstants.flyingSpots
+            .map((item) => FlyingSpot.fromMap(Map<String, dynamic>.from(item)))
+            .toList();
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Shared State: Menambah/menghapus lokasi dari daftar Favorit
   void toggleFavorite(String spotId) {
     if (_favoriteSpotIds.contains(spotId)) {
       _favoriteSpotIds.remove(spotId);
@@ -82,25 +88,6 @@ class WeatherProvider extends ChangeNotifier {
 
   void setFilter(String filter) {
     _selectedFilter = filter;
-    notifyListeners();
-  }
-
-  // Digunakan pada Tahap 8 saat mengintegrasikan REST API
-  void updateSpotsFromApi(List<FlyingSpot> updatedSpots) {
-    _spots = updatedSpots;
-    _isLoading = false;
-    _errorMessage = null;
-    notifyListeners();
-  }
-
-  void setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
-  }
-
-  void setError(String? message) {
-    _errorMessage = message;
-    _isLoading = false;
     notifyListeners();
   }
 }
