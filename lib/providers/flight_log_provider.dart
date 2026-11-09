@@ -84,10 +84,30 @@ class FlightLogProvider extends ChangeNotifier {
     }
   }
 
-  void updateLocalLog(FlightLog updatedLog) {
-    final index = _logs.indexWhere((item) => item.id == updatedLog.id);
-    if (index != -1) {
-      _logs[index] = updatedLog;
+  // Operasi UPDATE Database (Tahap 11)
+  Future<bool> updateLog(FlightLog updatedLog) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      FlightLog resultLog = updatedLog;
+      if (_repository.isDatabaseReady) {
+        resultLog = await _repository.updateFlightLog(updatedLog);
+      } else {
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+
+      final index = _logs.indexWhere((item) => item.id == updatedLog.id);
+      if (index != -1) {
+        _logs[index] = resultLog;
+      }
+      return true;
+    } catch (e) {
+      _errorMessage = 'Gagal memperbarui Flight Log: $e';
+      return false;
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
