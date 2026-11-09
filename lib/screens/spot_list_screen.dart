@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/app_constants.dart';
 import '../providers/weather_provider.dart';
 import '../widgets/spot_card.dart';
+import '../widgets/state_status_view.dart';
 import 'spot_detail_screen.dart';
 
 class SpotListScreen extends StatelessWidget {
@@ -23,6 +24,13 @@ class SpotListScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Muat Ulang API',
+            onPressed: weatherProv.isLoading
+                ? null
+                : () => weatherProv.fetchLiveWeatherSpots(),
+            icon: const Icon(Icons.refresh, color: AppConstants.primaryMint),
+          ),
           PopupMenuButton<bool?>(
             tooltip: 'Urutkan Kecepatan Angin',
             icon: const Icon(Icons.sort, color: AppConstants.primaryMint),
@@ -114,58 +122,91 @@ class SpotListScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: weatherProv.fetchLiveWeatherSpots,
-                    child: filteredSpots.isEmpty
-                        ? const Center(
-                            child: Text('Lokasi tidak ditemukan.'),
-                          )
-                        : isWide
-                            ? GridView.builder(
-                                itemCount: filteredSpots.length,
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: gridCols,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                  mainAxisExtent: 156,
+                  child: weatherProv.isLoading
+                      ? const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 12),
+                              Text('Memuat data cuaca dari REST API...'),
+                            ],
+                          ),
+                        )
+                      : weatherProv.errorMessage != null &&
+                              filteredSpots.isEmpty
+                          ? StateStatusView(
+                              icon: Icons.cloud_off,
+                              title: 'Gagal Memuat Cuaca API',
+                              message: weatherProv.errorMessage!,
+                              actionLabel: 'Coba Lagi',
+                              isError: true,
+                              onAction: weatherProv.fetchLiveWeatherSpots,
+                            )
+                          : filteredSpots.isEmpty
+                              ? StateStatusView(
+                                  icon: Icons.travel_explore,
+                                  title: 'Lokasi Tidak Ditemukan',
+                                  message:
+                                      'Tidak ada lokasi terbang yang cocok dengan filter "${weatherProv.selectedFilter}" atau kata kunci pencarianmu.',
+                                  actionLabel: 'Reset Filter',
+                                  onAction: () {
+                                    weatherProv.setSearchQuery('');
+                                    weatherProv.setFilter('Semua');
+                                  },
+                                )
+                              : RefreshIndicator(
+                                  onRefresh: weatherProv.fetchLiveWeatherSpots,
+                                  child: isWide
+                                      ? GridView.builder(
+                                          itemCount: filteredSpots.length,
+                                          gridDelegate:
+                                              SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: gridCols,
+                                            crossAxisSpacing: 16,
+                                            mainAxisSpacing: 16,
+                                            mainAxisExtent: 156,
+                                          ),
+                                          itemBuilder: (context, index) {
+                                            final spotMap =
+                                                filteredSpots[index].toMap();
+                                            return SpotCard(
+                                              spot: spotMap,
+                                              margin: EdgeInsets.zero,
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        SpotDetailScreen(
+                                                            spot: spotMap),
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                          },
+                                        )
+                                      : ListView.builder(
+                                          itemCount: filteredSpots.length,
+                                          itemBuilder: (context, index) {
+                                            final spotMap =
+                                                filteredSpots[index].toMap();
+                                            return SpotCard(
+                                              spot: spotMap,
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        SpotDetailScreen(
+                                                            spot: spotMap),
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                          },
+                                        ),
                                 ),
-                                itemBuilder: (context, index) {
-                                  final spotMap = filteredSpots[index].toMap();
-                                  return SpotCard(
-                                    spot: spotMap,
-                                    margin: EdgeInsets.zero,
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              SpotDetailScreen(spot: spotMap),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              )
-                            : ListView.builder(
-                                itemCount: filteredSpots.length,
-                                itemBuilder: (context, index) {
-                                  final spotMap = filteredSpots[index].toMap();
-                                  return SpotCard(
-                                    spot: spotMap,
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              SpotDetailScreen(spot: spotMap),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                  ),
                 ),
               ],
             ),

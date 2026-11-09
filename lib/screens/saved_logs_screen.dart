@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/app_constants.dart';
 import '../models/flight_log.dart';
 import '../providers/flight_log_provider.dart';
+import '../widgets/state_status_view.dart';
 import 'add_log_screen.dart';
 import 'edit_log_screen.dart';
 
@@ -145,6 +146,32 @@ class SavedLogsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          if (logProv.errorMessage != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      logProv.errorMessage!,
+                      style: const TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: logProv.fetchLogs,
+                    child: const Text('Muat Ulang'),
+                  ),
+                ],
+              ),
+            ),
           const Text(
             'Catatan Uji Terbang Tersimpan',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
@@ -152,15 +179,30 @@ class SavedLogsScreen extends StatelessWidget {
           const SizedBox(height: 10),
           if (logProv.isLoading)
             const Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Center(child: CircularProgressIndicator()),
+              padding: EdgeInsets.all(40.0),
+              child: Center(
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text('Memproses data Flight Log...'),
+                  ],
+                ),
+              ),
             )
           else if (logs.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Center(
-                child: Text('Belum ada catatan terbang di database.'),
-              ),
+            StateStatusView(
+              icon: Icons.flight_land,
+              title: 'Belum Ada Catatan Terbang',
+              message:
+                  'Logbook penerbangan RC kamu masih kosong. Mulai catat hasil uji terbang pertamamu!',
+              actionLabel: 'Tambah Flight Log Pertama',
+              onAction: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddLogScreen()),
+                );
+              },
             )
           else
             ...logs.map((log) {
