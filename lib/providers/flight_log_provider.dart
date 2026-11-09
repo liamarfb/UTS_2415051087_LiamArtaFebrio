@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/flight_log.dart';
+import '../repositories/flight_log_repository.dart';
 
 class FlightLogProvider extends ChangeNotifier {
-  final List<FlightLog> _logs = [
+  final FlightLogRepository _repository;
+
+  List<FlightLog> _logs = [
     FlightLog(
       id: '1',
       spotName: 'Lapangan Bhuana Patra',
@@ -26,9 +29,33 @@ class FlightLogProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  FlightLogProvider({FlightLogRepository? repository})
+      : _repository = repository ?? FlightLogRepository() {
+    fetchLogs();
+  }
+
   List<FlightLog> get logs => List.unmodifiable(_logs);
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get isSupabaseActive => _repository.isDatabaseReady;
+
+  // Operasi READ Database
+  Future<void> fetchLogs() async {
+    if (!_repository.isDatabaseReady) return;
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _logs = await _repository.getFlightLogs();
+    } catch (e) {
+      _errorMessage = 'Gagal memuat database: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   void addLocalLog(FlightLog newLog) {
     _logs.insert(
@@ -48,17 +75,6 @@ class FlightLogProvider extends ChangeNotifier {
 
   void deleteLocalLog(String id) {
     _logs.removeWhere((item) => item.id == id);
-    notifyListeners();
-  }
-
-  void setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
-  }
-
-  void setError(String? message) {
-    _errorMessage = message;
-    _isLoading = false;
     notifyListeners();
   }
 }
