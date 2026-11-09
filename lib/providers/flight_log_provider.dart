@@ -39,7 +39,7 @@ class FlightLogProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isSupabaseActive => _repository.isDatabaseReady;
 
-  // Operasi READ Database
+  // Operasi READ Database (Tahap 9)
   Future<void> fetchLogs() async {
     if (!_repository.isDatabaseReady) return;
 
@@ -112,8 +112,26 @@ class FlightLogProvider extends ChangeNotifier {
     }
   }
 
-  void deleteLocalLog(String id) {
-    _logs.removeWhere((item) => item.id == id);
+  // Operasi DELETE Database (Tahap 12)
+  Future<bool> deleteLog(String id) async {
+    _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
+
+    try {
+      if (_repository.isDatabaseReady) {
+        await _repository.deleteFlightLog(id);
+      } else {
+        await Future.delayed(const Duration(milliseconds: 250));
+      }
+      _logs.removeWhere((item) => item.id == id);
+      return true;
+    } catch (e) {
+      _errorMessage = 'Gagal menghapus Flight Log: $e';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

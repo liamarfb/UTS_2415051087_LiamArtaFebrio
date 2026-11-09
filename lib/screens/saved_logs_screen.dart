@@ -1,12 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_constants.dart';
+import '../models/flight_log.dart';
 import '../providers/flight_log_provider.dart';
 import 'add_log_screen.dart';
 import 'edit_log_screen.dart';
 
 class SavedLogsScreen extends StatelessWidget {
   const SavedLogsScreen({super.key});
+
+  Future<void> _confirmDelete(BuildContext context, FlightLog log) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Catatan Terbang?'),
+        content: Text(
+          'Apakah kamu yakin ingin menghapus log "${log.aircraft}" di ${log.spotName}? Tindakan ini tidak dapat dibatalkan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted && log.id != null) {
+      final provider = context.read<FlightLogProvider>();
+      final success = await provider.deleteLog(log.id!);
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Catatan terbang berhasil dihapus.'
+                : (provider.errorMessage ?? 'Gagal menghapus catatan.'),
+          ),
+          backgroundColor: success ? Colors.black87 : Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +128,7 @@ class SavedLogsScreen extends StatelessWidget {
                         child: Text(
                           logProv.isSupabaseActive
                               ? 'Supabase PostgreSQL Connected'
-                              : 'Local Mode (Isi URL Supabase di AppConstants)',
+                              : 'Local Mode (Siap Sinkron Supabase)',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -143,26 +184,38 @@ class SavedLogsScreen extends StatelessWidget {
                       '${log.spotName} • ${log.durationMinutes} menit • Rating ${log.rating}/5\n${log.notes}',
                     ),
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit_outlined,
-                        color: AppConstants.primaryMint),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => EditLogScreen(
-                            logData: {
-                              'id': log.id,
-                              'spot': log.spotName,
-                              'aircraft': log.aircraft,
-                              'duration': log.durationMinutes,
-                              'notes': log.notes,
-                              'rating': log.rating,
-                            },
-                          ),
-                        ),
-                      );
-                    },
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Edit Log',
+                        icon: const Icon(Icons.edit_outlined,
+                            color: AppConstants.primaryMint),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditLogScreen(
+                                logData: {
+                                  'id': log.id,
+                                  'spot': log.spotName,
+                                  'aircraft': log.aircraft,
+                                  'duration': log.durationMinutes,
+                                  'notes': log.notes,
+                                  'rating': log.rating,
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        tooltip: 'Hapus Log',
+                        icon: const Icon(Icons.delete_outline,
+                            color: Colors.redAccent),
+                        onPressed: () => _confirmDelete(context, log),
+                      ),
+                    ],
                   ),
                 ),
               );
