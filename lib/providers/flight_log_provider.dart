@@ -57,12 +57,31 @@ class FlightLogProvider extends ChangeNotifier {
     }
   }
 
-  void addLocalLog(FlightLog newLog) {
-    _logs.insert(
-      0,
-      newLog.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString()),
-    );
+  // Operasi CREATE Database (Tahap 10)
+  Future<bool> createLog(FlightLog newLog) async {
+    _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
+
+    try {
+      if (_repository.isDatabaseReady) {
+        final created = await _repository.createFlightLog(newLog);
+        _logs.insert(0, created);
+      } else {
+        await Future.delayed(const Duration(milliseconds: 300));
+        _logs.insert(
+          0,
+          newLog.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString()),
+        );
+      }
+      return true;
+    } catch (e) {
+      _errorMessage = 'Gagal menyimpan Flight Log: $e';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   void updateLocalLog(FlightLog updatedLog) {
