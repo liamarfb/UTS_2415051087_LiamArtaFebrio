@@ -12,6 +12,7 @@ class WeatherProvider extends ChangeNotifier {
   String? _errorMessage;
   String _searchQuery = '';
   String _selectedFilter = 'Semua';
+  bool? _sortWindAscending;
 
   WeatherProvider({WeatherRepository? repository})
       : _repository = repository ?? WeatherRepository() {
@@ -24,9 +25,10 @@ class WeatherProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
   String get selectedFilter => _selectedFilter;
+  bool? get sortWindAscending => _sortWindAscending;
 
   List<FlyingSpot> get filteredSpots {
-    return _spots.where((spot) {
+    final result = _spots.where((spot) {
       final matchesSearch = spot.name
               .toLowerCase()
               .contains(_searchQuery.toLowerCase()) ||
@@ -39,6 +41,13 @@ class WeatherProvider extends ChangeNotifier {
           _selectedFilter == 'Semua' || spot.status == _selectedFilter;
       return matchesSearch && matchesFilter;
     }).toList();
+
+    if (_sortWindAscending != null) {
+      result.sort((a, b) => _sortWindAscending!
+          ? a.windSpeed.compareTo(b.windSpeed)
+          : b.windSpeed.compareTo(a.windSpeed));
+    }
+    return result;
   }
 
   double get averageWindSpeed {
@@ -47,7 +56,6 @@ class WeatherProvider extends ChangeNotifier {
     return double.parse((total / _spots.length).toStringAsFixed(1));
   }
 
-  // Mengambil data cuaca real-time dari Open-Meteo REST API via Repository
   Future<void> fetchLiveWeatherSpots() async {
     _isLoading = true;
     _errorMessage = null;
@@ -58,7 +66,6 @@ class WeatherProvider extends ChangeNotifier {
       _spots = liveSpots;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
-      // Jika sedang belum ada data sama sekali, sediakan fallback awal agar tetap aman
       if (_spots.isEmpty) {
         _spots = AppConstants.flyingSpots
             .map((item) => FlyingSpot.fromMap(Map<String, dynamic>.from(item)))
@@ -88,6 +95,11 @@ class WeatherProvider extends ChangeNotifier {
 
   void setFilter(String filter) {
     _selectedFilter = filter;
+    notifyListeners();
+  }
+
+  void setWindSort(bool? ascending) {
+    _sortWindAscending = ascending;
     notifyListeners();
   }
 }

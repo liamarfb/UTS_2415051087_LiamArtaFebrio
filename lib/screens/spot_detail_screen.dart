@@ -4,15 +4,81 @@ import '../core/app_constants.dart';
 import '../providers/weather_provider.dart';
 import 'add_log_screen.dart';
 
-class SpotDetailScreen extends StatelessWidget {
+class SpotDetailScreen extends StatefulWidget {
   final Map<String, dynamic> spot;
 
   const SpotDetailScreen({super.key, required this.spot});
 
   @override
+  State<SpotDetailScreen> createState() => _SpotDetailScreenState();
+}
+
+class _SpotDetailScreenState extends State<SpotDetailScreen> {
+  final Map<String, bool> _preFlightChecks = {
+    'Tegangan LiPo & konektor baterai aman (4.2V/cell)': false,
+    'Center of Gravity (CG) & struktur sayap seimbang': false,
+    'Arah defleksi Aileron, Elevator, & Rudder normal': false,
+    'Failsafe radio & jangkauan sinyal telemetri aktif': false,
+  };
+
+  int get _completedChecks =>
+      _preFlightChecks.values.where((checked) => checked).length;
+
+  bool get _isReadyToFly => _completedChecks == _preFlightChecks.length;
+
+  void _handleProceedToLog() {
+    if (!_isReadyToFly) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Pre-Flight Checklist Belum Lengkap'),
+          content: const Text(
+            'Beberapa poin pemeriksaan keselamatan wahana belum dicentang. Tetap lanjutkan mencatat penerbangan?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Periksa Kembali'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppConstants.accentPeach,
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddLogScreen(
+                      initialSpotName: widget.spot['name'].toString(),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Tetap Lanjut'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddLogScreen(
+          initialSpotName: widget.spot['name'].toString(),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final spot = widget.spot;
     final bool isOptimal = spot['status'] == 'Optimal';
     final String spotId = spot['id']?.toString() ?? '';
+    final double progress = _completedChecks / _preFlightChecks.length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -177,31 +243,110 @@ class SpotDetailScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+                // Fitur Kreativitas: Interactive Pre-Flight Checklist
+                Card(
+                  elevation: 0,
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Pre-Flight Safety Checklist',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            Text(
+                              '$_completedChecks/${_preFlightChecks.length} Siap',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: _isReadyToFly
+                                    ? const Color(0xFF0F766E)
+                                    : AppConstants.accentPeach,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 8,
+                            backgroundColor: Colors.grey.shade200,
+                            color: _isReadyToFly
+                                ? AppConstants.primaryMint
+                                : AppConstants.accentPeach,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ..._preFlightChecks.keys.map((item) {
+                          return CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                            activeColor: AppConstants.primaryMint,
+                            title: Text(
+                              item,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                            value: _preFlightChecks[item],
+                            onChanged: (val) {
+                              setState(() {
+                                _preFlightChecks[item] = val ?? false;
+                              });
+                              if (_isReadyToFly) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Semua ceklis selesai! Wahana siap lepas landas.',
+                                    ),
+                                    backgroundColor: AppConstants.primaryMint,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            },
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppConstants.primaryMint,
+                      backgroundColor: _isReadyToFly
+                          ? AppConstants.primaryMint
+                          : AppConstants.accentPeach,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => AddLogScreen(
-                              initialSpotName: spot['name'].toString()),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.note_add_outlined),
-                    label: const Text(
-                      'Catat Flight Log di Lokasi Ini',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    onPressed: _handleProceedToLog,
+                    icon: Icon(
+                      _isReadyToFly
+                          ? Icons.flight_takeoff
+                          : Icons.note_add_outlined,
+                    ),
+                    label: Text(
+                      _isReadyToFly
+                          ? 'Wahana Siap! Catat Flight Log'
+                          : 'Catat Flight Log di Lokasi Ini',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                   ),
                 ),
