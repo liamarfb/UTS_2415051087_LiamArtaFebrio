@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/app_constants.dart';
+import '../providers/weather_provider.dart';
 
 class SpotCard extends StatelessWidget {
   final Map<String, dynamic> spot;
@@ -16,6 +18,11 @@ class SpotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isOptimal = spot['status'] == 'Optimal';
+    final String spotId = spot['id']?.toString() ?? '';
+    final bool isFav = context.select<WeatherProvider, bool>(
+      (prov) => prov.isFavorite(spotId),
+    );
+    final int windDir = (spot['windDirection'] as num?)?.toInt() ?? 180;
 
     return Card(
       elevation: 0,
@@ -23,7 +30,11 @@ class SpotCard extends StatelessWidget {
       margin: margin ?? const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(
+          color: isFav
+              ? AppConstants.primaryMint.withValues(alpha: 0.5)
+              : Colors.grey.shade200,
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -41,19 +52,34 @@ class SpotCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Text(
-                          spot['name'].toString(),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Row(
+                          children: [
+                            if (isFav) ...[
+                              const Icon(
+                                Icons.bookmark,
+                                size: 18,
+                                color: AppConstants.accentPeach,
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                            Expanded(
+                              child: Text(
+                                spot['name'].toString(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: isOptimal
                               ? AppConstants.primaryMint.withValues(alpha: 0.15)
@@ -76,12 +102,14 @@ class SpotCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                      const Icon(Icons.location_on_outlined,
+                          size: 16, color: Colors.grey),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           '${spot['region']} • ${spot['terrain']}',
-                          style: const TextStyle(fontSize: 13, color: Colors.black54),
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.black54),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -96,18 +124,22 @@ class SpotCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.air, size: 18, color: AppConstants.primaryMint),
+                      const Icon(Icons.air,
+                          size: 18, color: AppConstants.primaryMint),
                       const SizedBox(width: 4),
                       Text(
-                        '${spot['windSpeed']} km/h',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        '${spot['windSpeed']} km/h ($windDir°)',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                       const SizedBox(width: 10),
-                      const Icon(Icons.thermostat_outlined, size: 18, color: AppConstants.accentPeach),
+                      const Icon(Icons.thermostat_outlined,
+                          size: 18, color: AppConstants.accentPeach),
                       const SizedBox(width: 2),
                       Text(
                         '${spot['temp']}°C',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ],
                   ),
@@ -115,7 +147,8 @@ class SpotCard extends StatelessWidget {
                   Flexible(
                     child: Text(
                       spot['recommendedWing'].toString(),
-                      style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.blueGrey),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
