@@ -10,8 +10,8 @@ class AppConstants {
   static const Color softPeach = Color(0xFFFFBF69);
 
   static const String weatherBaseUrl = 'https://api.open-meteo.com/v1/forecast';
-  static const String supabaseUrl = '';
-  static const String supabaseAnonKey = '';
+  static const String supabaseUrl = 'https://yelxlykemozlslreswmi.supabase.co';
+  static const String supabaseAnonKey = 'sb_publishable_HRiwbkDlOAzg1CMMOgJVjg_mlinGGYN';
   static const String flightLogsTable = 'flight_logs';
 
   static const flyingSpots = [
